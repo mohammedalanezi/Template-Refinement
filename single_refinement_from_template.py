@@ -190,20 +190,20 @@ if __name__ == "__main__":
 
 	print("Enforcing exactly one intersection for each line in one parallel class to the other.")
 	for i in range(candidate_line_count): # A's candidate lines each intersect a line in B once
-		InterB = [j for j in range(candidate_line_count) if getIntersections(i, j) == 1]
-		if not len(InterB): # no compatible B to intersect exactly once -> cannot choose a_i
+		intersectingB = [j for j in range(candidate_line_count) if getIntersections(i, j) == 1]
+		if len(intersectingB) == 0: # no compatible B to intersect exactly once -> cannot choose a_i
 			addClause([-a[i]])
 		else: # at least one: (-a_i OR b_j1 OR b_j2 OR ...)
-			addImplicationClause([a[i]], [b[j] for j in InterB])
-			for p, q in itertools.combinations(InterB, 2):
+			addImplicationClause([a[i]], [b[j] for j in intersectingB])
+			for p, q in itertools.combinations(intersectingB, 2):
 				addClause([-a[i], -b[p], -b[q]])
 	for j in range(candidate_line_count): # B's candidate lines each intersect a line in A once
-		InterA = [i for i in range(candidate_line_count) if getIntersections(i, j) == 1]
-		if not len(InterA):
+		intersectingA = [i for i in range(candidate_line_count) if getIntersections(i, j) == 1]
+		if len(intersectingA) == 0:
 			addClause([-b[j]])
 		else:
-			addImplicationClause([b[j]], [a[i] for i in InterA])
-			for p, q in itertools.combinations(InterA, 2):
+			addImplicationClause([b[j]], [a[i] for i in intersectingA])
+			for p, q in itertools.combinations(intersectingA, 2):
 				addClause([-b[j], -a[p], -a[q]])
 
 	clauseCount = len(clauses)
@@ -237,3 +237,5 @@ if __name__ == "__main__":
 # I might need to add in the lines from parallel class 0 and 1 to add orthogonality property between lines from these parllel classes and the 2 new ones we are making
 #   Similarly, two lines ℓ1 and ℓ2 are orthogonal if |ℓ1 ∩ ℓ2| = 1. A k-net(n) is a partial linear space N = (P, L) consisting of a set P of n 2 points and a set L of kn lines, 
 #   such that each line is incident with n points and each point is incident with k lines.
+
+# Currently does not work, either uses too much memory or some other reason for the python command to auto execute it (but most of the time WSL just crashes).
