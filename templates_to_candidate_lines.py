@@ -11,11 +11,12 @@ output_path = os.path.join(script_dir, "lines.txt")
 
 kissat_path = os.path.join(parent_dir, "cadical-exhaust-master", "build", "cadical-exhaust") # Before testing: Update this to your sat solver's location 
 
-diagnostic_information_path = os.path.join(script_dir, "candidate_lines_diagnostic_information.txt")
-trivial_template_path = os.path.join(script_dir, "source", "trivial_template.txt")
-	
+frequency_square = 3 
 order = 10
 
+diagnostic_information_path = os.path.join(script_dir, str(frequency_square) + "-candidate_lines_diagnostic_information.txt")
+trivial_template_path = os.path.join(script_dir, "source", "trivial_template.txt")
+	
 def addClause(variables):
 	if len(variables) == 0: 
 		return False
@@ -123,7 +124,6 @@ for j in range(6965):
 	add_diagnostic_information(f"# Started candidate line search for {j}-template.txt.")
 	for i in range(2):
 		relational_lines = i % 2 == 0
-		frequency_square = 2 # both frequency squares return the same candidate lines
 
 		add_diagnostic_information(f"- Finding {"" if relational_lines==True else "non-"}relational candidate lines for {j}-template.txt.")
 		
@@ -139,7 +139,7 @@ for j in range(6965):
 		template = []
 		load_template_file(trivial_template_path)
 		load_template_file(os.path.join(script_dir, "templates", str(j + 1) + "-template.txt"))
-		candidate_lines_output_path = os.path.join(script_dir, "candidate_lines", str(j + 1) + "-candidate_lines.txt")
+		candidate_lines_output_path = os.path.join(script_dir, str(frequency_square) + "-candidate_lines", str(j + 1) + "-candidate_lines.txt")
 
 		variableCount = get1DIndex(order-1, order-1) 
 		exhaustive_variables = variableCount
@@ -185,7 +185,7 @@ for j in range(6965):
 
 		kissat_time = time.time()
 		with open(output_path, "w") as out_file:
-			commands = [kissat_path, input_path, "--order", str(exhaustive_variables)]
+			commands = [kissat_path, input_path, "--only-neg", "--order", str(exhaustive_variables)]
 			subprocess.run(commands, stdout=out_file, stderr=subprocess.STDOUT)
 		script_time_sat_elapsed = round((time.time() - kissat_time) * 100)/100
 		print("Wrote output to:", output_path)
@@ -221,4 +221,4 @@ for j in range(6965):
 
 add_diagnostic_information(f"Total time spent finding all templates: {round((time.time() - total_time) * 100)/100} seconds")
 
-# cd /mnt/g/Code/sat\ solver\ stuff/search\ templates
+# cd /mnt/g/Code/sat\ solver\ stuff/refinements\ and\ candidate\ lines
