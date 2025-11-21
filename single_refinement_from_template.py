@@ -126,18 +126,18 @@ def load_candidate_lines_file(file_path):
 			key = (i, j)
 			intersection_cache[key] = intersection_cache.get(key, 0) + 1
 
-def get_intersections(i, j): 
+def getIntersections(i, j): 
     key = (min(i,j), max(i,j))
     return intersection_cache.get(key, 0)
 
-def get_line(id):
+def getLine(id):
 	if id < len(candidate_lines[0]):
 		return candidate_lines[0][id]
 	else:
 		id -= len(candidate_lines[0])
 		return candidate_lines[1][id]
 	
-def get_new_var():
+def getNewVariable():
 	global variableCount
 	variableCount += 1
 	return variableCount
@@ -151,11 +151,11 @@ if __name__ == "__main__":
 	a = [None] * candidate_line_count # a[i] = true <=> candidate i selected for A
 	b = [None] * candidate_line_count # b[i] = true <=> candidate i selected for B
 	for i in range(candidate_line_count):
-		x[i] = get_new_var()
+		x[i] = getNewVariable()
 	for i in range(candidate_line_count):
-		a[i] = get_new_var()
+		a[i] = getNewVariable()
 	for i in range(candidate_line_count):
-		b[i] = get_new_var()
+		b[i] = getNewVariable()
 	# variable count is now 3 * candidate_line_count   
 
 	print("Setting up equivalences between parallel classes and disjoint relationship.")
@@ -184,13 +184,13 @@ if __name__ == "__main__":
 	print("Forbidding parallel classes from intersecting within each other.")
 	for i in range(candidate_line_count): # forbid parallel classes from having lines that intersection each other
 		for j in range(i+1, candidate_line_count):
-			if get_intersections(i, j) > 0:
+			if getIntersections(i, j) > 0:
 				addClause([-a[i], -a[j]])
 				addClause([-b[i], -b[j]])
 
 	print("Enforcing exactly one intersection for each line in one parallel class to the other.")
 	for i in range(candidate_line_count): # A's candidate lines each intersect a line in B once
-		InterB = [j for j in range(candidate_line_count) if get_intersections(i, j) == 1]
+		InterB = [j for j in range(candidate_line_count) if getIntersections(i, j) == 1]
 		if not len(InterB): # no compatible B to intersect exactly once -> cannot choose a_i
 			addClause([-a[i]])
 		else: # at least one: (-a_i OR b_j1 OR b_j2 OR ...)
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 			for p, q in itertools.combinations(InterB, 2):
 				addClause([-a[i], -b[p], -b[q]])
 	for j in range(candidate_line_count): # B's candidate lines each intersect a line in A once
-		InterA = [i for i in range(candidate_line_count) if get_intersections(i, j) == 1]
+		InterA = [i for i in range(candidate_line_count) if getIntersections(i, j) == 1]
 		if not len(InterA):
 			addClause([-b[j]])
 		else:
