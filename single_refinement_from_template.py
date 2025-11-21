@@ -239,3 +239,4 @@ if __name__ == "__main__":
 #   such that each line is incident with n points and each point is incident with k lines.
 
 # Currently does not work, either uses too much memory or some other reason for the python command to auto execute it (but most of the time WSL just crashes).
+#	Running with 12 GB for MEMORY, 12 GB for SWAP, and 12 processors avaliable
