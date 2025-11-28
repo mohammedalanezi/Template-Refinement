@@ -1,0 +1,19 @@
+c ---- [ banner ] ------------------------------------------------------------
+c
+c Kissat SAT Solver
+c 
+c Copyright (c) 2021-2024 Armin Biere University of Freiburg
+c Copyright (c) 2019-2021 Armin Biere Johannes Kepler University Linz
+c 
+c Version 4.0.2 unknown
+c gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0 -W -Wall -O3 -DNDEBUG
+c Wed Jun 4 00:50:03 EDT 2025 Linux MPC 5.15.167.4-microsoft-standard-WSL2 x86_64
+c
+c ---- [ parsing ] -----------------------------------------------------------
+c
+c opened and reading DIMACS file:
+c
+c   /mnt/g/Code/sat solver stuff/refinements and candidate lines/encoding.cnf
+c
+c parsed 'p cnf 28936 573215456' header
+kissat: error: /mnt/g/Code/sat solver stuff/refinements and candidate lines/encoding.cnf:1: parse error: more than one clause missing (try '--relaxed' parsing)
