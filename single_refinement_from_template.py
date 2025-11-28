@@ -170,7 +170,7 @@ if __name__ == "__main__":
 			if intersections_00 > 0: # ensure parallel lines
 				addImplicationClause([a[i]], [-a[j]])
 				addImplicationClause([a[j]], [-a[i]])
-		if i % 100 == 0:
+		if i % 1000 == 0:
 			print(f"{i}/{candidate_line_count[0]}")
 
 	print("Forbidding lines in parallel class B from intersecting within each other.")
@@ -180,7 +180,7 @@ if __name__ == "__main__":
 			if intersections_11 > 0: # ensure parallel lines
 				addImplicationClause([b[i]], [-b[j]])
 				addImplicationClause([b[j]], [-b[i]])
-		if i % 100 == 0:
+		if i % 1000 == 0:
 			print(f"{i}/{candidate_line_count[1]}")
 
 	compatibleA = [[] for _ in range(candidate_line_count[0])]
@@ -196,7 +196,7 @@ if __name__ == "__main__":
 			else:
 				compatibleA[i].append(j)
 				compatibleB[j].append(i)
-		if i % 100 == 0:
+		if i % 1000 == 0:
 			print(f"{i}/{candidate_line_count[0]}")
 
 	print("Removing orphan lines, those lines that were selected but not their corresponding lines with exactly one intersection.")
@@ -209,6 +209,7 @@ if __name__ == "__main__":
 			addClause([-b[j]])
 
 	dumpClauses()
+	print(f"Total of {variableCount} variables and {clauseCount} clauses.")
 
 	prepend_to_file_with_temp(input_path, f"p cnf {variableCount} {clauseCount}\n") # worse case for clause count is between 9 and 12 billion clauses
 			
