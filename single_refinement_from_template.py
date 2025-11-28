@@ -43,6 +43,13 @@ def prepend_to_file_with_temp(filepath, content_to_prepend):
                 temp.write(line) 
     os.replace(temp_filepath, filepath) # replaces original file with temporary one
 
+def dumpClauses():
+    global clauses
+    with open(input_path, "a") as f:
+        for line in clauses:
+            f.write(line + "0\n")
+    clauses.clear()
+
 def writeClause(clause):
 	global clauseCount
 	global clauses
@@ -200,6 +207,8 @@ if __name__ == "__main__":
 	for j in range(candidate_line_count[1]): # worse case 14k clauses
 		if len(compatibleB[j]) == 0:
 			addClause([-b[j]])
+
+	dumpClauses()
 
 	prepend_to_file_with_temp(input_path, f"p cnf {variableCount} {clauseCount}\n") # worse case for clause count is between 9 and 12 billion clauses
 			
