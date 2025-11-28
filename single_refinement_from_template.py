@@ -192,7 +192,7 @@ if __name__ == "__main__":
 		if i % 100 == 0:
 			print(f"{i}/{candidate_line_count[0]}")
 
-	print("Removing orphan lines, those lines that were selected but not their partner.")
+	print("Removing orphan lines, those lines that were selected but not their corresponding lines with exactly one intersection.")
 	for i in range(candidate_line_count[0]): # worse case 14k clauses
 		if len(compatibleA[i]) == 0:
 			addClause([-a[i]])
