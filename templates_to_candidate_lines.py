@@ -14,7 +14,7 @@ kissat_path = os.path.join(parent_dir, "cadical-exhaust-master", "build", "cadic
 frequency_square = 3 
 order = 10
 
-diagnostic_information_path = os.path.join(script_dir, str(frequency_square) + "-candidate_lines_diagnostic_information.txt")
+diagnostic_information_path = os.path.join(script_dir, str(frequency_square) + "-candidate_lines_diagnostic_information-2.txt")
 trivial_template_path = os.path.join(script_dir, "source", "trivial_template.txt")
 	
 def addClause(variables):
@@ -120,7 +120,7 @@ def getTemplateBit(r, c, bit):
 
 total_time = time.time()
 
-for j in range(6965):
+for j in range(6354,6355): # range(6965):
 	add_diagnostic_information(f"# Started candidate line search for {j}-template.txt.")
 	for i in range(2):
 		relational_lines = i % 2 == 0
