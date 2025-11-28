@@ -4,7 +4,7 @@ import sys
 import time
 
 import collections
-import itertools
+from collections import defaultdict
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(script_dir)
@@ -18,7 +18,8 @@ if len(sys.argv) < 2:
 	print("Usage: python3 generate.py <template_id>\n") 
 	sys.exit(1)
 	
-candidate_lines_path = os.path.join(script_dir, "candidate_lines", str(sys.argv[1])+"-candidate_lines.txt")
+candidate_lines_2_path = os.path.join(script_dir, "2-candidate_lines", str(sys.argv[1])+"-candidate_lines.txt")
+candidate_lines_3_path = os.path.join(script_dir, "3-candidate_lines", str(sys.argv[1])+"-candidate_lines.txt")
 	
 start_time = time.time()
 dimacs_elapsed = 0
@@ -26,10 +27,32 @@ kissat_elapsed = 0
 
 clauses = []
 variableCount = 0
+clauseCount = 0
 
-candidate_lines = [[], []] # Relational, Non-relational
-candidate_line_count = 0
+points = [set(), set()]
+candidate_lines = [[[], []], [[], []]] # Relational, Non-relational
+candidate_line_count = [0, 0]
 order = 10
+
+def prepend_to_file_with_temp(filepath, content_to_prepend):
+    temp_filepath = filepath + ".tmp"
+    with open(temp_filepath, 'w') as temp:
+        temp.write(content_to_prepend) 
+        with open(filepath, 'r') as f:
+            for line in f:
+                temp.write(line) 
+    os.replace(temp_filepath, filepath) # replaces original file with temporary one
+
+def writeClause(clause):
+	global clauseCount
+	global clauses
+	clauseCount += 1
+	clauses.append(clause)
+	if len(clauses) > 100000:
+		with open(input_path, "a") as f:
+			for line in clauses:
+				f.write(line + "0\n")
+		clauses.clear()
 
 def addClause(variables):
 	if len(variables) == 0: 
@@ -37,7 +60,7 @@ def addClause(variables):
 	clause = ""
 	for v in variables:
 		clause += str(v) + " "
-	clauses.append(clause + "0")
+	writeClause(clause)
 	return True
 
 def addImplicationClause(antecedent, consequent): # conjunction(AND) of all antecedental variables implies the disjunction(OR) of consequental variables, e.g. "x1 and .. and xn" implies "y1 or ... or yn"
@@ -46,96 +69,33 @@ def addImplicationClause(antecedent, consequent): # conjunction(AND) of all ante
 		clause += str(-x) + " "
 	for y in consequent:
 		clause += str(y) + " "
-	clauses.append(clause + "0")
+	writeClause(clause)
 	return True
-
-def addCardinalityClauses(variables, mininum, maximum): # <= maximum variables and >= minimum values are true (latin squares would use minimum = maximum = 1 for each symbol)
-	global variableCount
-	
-	n = len(variables) # rows
-	k = maximum + 1	   # columns
-	l = mininum
-	
-	s = [] # Boolean counter variables, s[i][j] says at least j of the variables x1, ..., xi are assigned to true
-	for i in range(n + 1):
-		row = []
-		for j in range(k + 1):
-			variableCount += 1
-			row.append(variableCount)
-		s.append(row)
-	
-	for i in range(n+1):
-		addClause([s[i][0]]) # 0 variables are always true of variables [x1, ..., xi]
-	for j in range(1, k+1):
-		addClause([-s[0][j]]) # j>=1 of nothing is always false
-	for j in range(1, l+1):
-		addClause([s[n][j]]) # at least minimum of [x0, ..., xi-1] are true
-	for i in range(1, n+1):
-		addClause([-s[i][k]]) # at most maximum of [x0, ..., xi-1] are true
-		
-	for i in range(1, n+1): # for each variable xi, propagate counts across the table
-		for j in range(1, k+1):
-			addImplicationClause([s[i-1][j]], [s[i][j]]) # If at least j of the first i-1 variables are true, then at least j of the first i variables are true
-			addImplicationClause([variables[i-1], s[i-1][j-1]], [s[i][j]]) # If xi is true and at least j-1 of the first i-1 variables are true, then at least j of the first i variables are true
-			if j <= l:
-				addImplicationClause([s[i][j]], [s[i-1][j], variables[i-1]]) # If at least j of the first i variables are true, then either xi is true or at least j of the first i-1 variables were already true
-				addImplicationClause([s[i][j]], [s[i-1][j-1]]) # If at least j of the first i variables are true, then at least j-1 of the first i-1 variables must be true
-
-def getCombinations(totalList, array, n, currentRemovals): # n >= 0, generate all possible combinations from n choices
-	if n == 0:
-		totalList.append(currentRemovals)
-	else: 
-		for i in range(len(array)):
-			tmpList = array[i + 1 : len(array)]
-			removals = currentRemovals.copy()
-			removals.append(array[i])
-			getCombinations(totalList, tmpList, n - 1, removals)
-
-def addXORClauses(chain): # create XOR clauses for given chain, should add 2^(len(chain) - 1) clauses for XOR
-	for notCount in range(1, len(chain) + 1, 2):
-		total = []
-		getCombinations(total, list(range(len(chain))), notCount, [])
-		for i in range(len(total)):
-			tmpChain = chain.copy()
-			for j in range(len(total[i])):
-				tmpChain[total[i][j]] = -tmpChain[total[i][j]]
-			addClause(tmpChain)
 			
 point_cache = collections.defaultdict(list) 
 intersection_cache = {}
 
-def load_candidate_lines_file(file_path):
+def load_candidate_lines_file(file_path, p):
 	global candidate_line_count
 	with open(file_path, "r") as f:
 		for line in f: 
 			candidate_line = line[2:].split()
 			if line.startswith("R"):
-				candidate_lines[0].append(candidate_line)
+				candidate_lines[p][0].append(candidate_line)
 			elif line.startswith("N"):
-				candidate_lines[1].append(candidate_line)
+				candidate_lines[p][1].append(candidate_line)
 			else:
 				continue
-			for p in candidate_line:
-				point_cache[p].append(candidate_line_count)
-			candidate_line_count += 1
-	print("Precomputing all line intersections.")
-	for lines in point_cache.values():
-		if len(lines) < 2: # no intersections possible
-			continue
-		for i, j in itertools.combinations(lines, 2):
-			key = (i, j)
-			intersection_cache[key] = intersection_cache.get(key, 0) + 1
+			candidate_line_count[p] += 1
+			for point in candidate_line:
+				points[p].add(point)
 
-def getIntersections(i, j): 
-    key = (min(i,j), max(i,j))
-    return intersection_cache.get(key, 0)
-
-def getLine(id):
-	if id < len(candidate_lines[0]):
-		return candidate_lines[0][id]
+def getLine(id, p):
+	if id < len(candidate_lines[p][0]):
+		return candidate_lines[p][0][id]
 	else:
-		id -= len(candidate_lines[0])
-		return candidate_lines[1][id]
+		id -= len(candidate_lines[p][0])
+		return candidate_lines[p][1][id]
 	
 def getNewVariable():
 	global variableCount
@@ -143,73 +103,105 @@ def getNewVariable():
 	return variableCount
 
 if __name__ == "__main__": 
-	print("Loading candidate lines from:", candidate_lines_path)
-	load_candidate_lines_file(candidate_lines_path)
+	open(input_path, 'w').close()
+	print("Loading candidate lines from:", candidate_lines_2_path)
+	load_candidate_lines_file(candidate_lines_2_path, 0)
+	print("Loading candidate lines from:", candidate_lines_3_path)
+	load_candidate_lines_file(candidate_lines_3_path, 1)
+
+	A_sets = [set(getLine(i,0)) for i in range(candidate_line_count[0])]
+	B_sets = [set(getLine(j,1)) for j in range(candidate_line_count[1])]
+	
+	def getIntersections(i, j, p1, p2): 
+		line_i = None
+		line_j = None
+		if p1 == 0:
+			line_i = A_sets[i]
+		else:
+			line_i = B_sets[i]
+		if p2 == 0:
+			line_j = A_sets[j]
+		else:
+			line_j = B_sets[j]
+		return len(line_i & line_j)
+
 	print("Assinging variables to each candidate line.")
 	#	1 <= i <= candidate_line_count, needs to immutable object so it doesnt reference same value for all entries of array
-	x = [None] * candidate_line_count # x[i] = true <=> candidate i selected in net
-	a = [None] * candidate_line_count # a[i] = true <=> candidate i selected for A
-	b = [None] * candidate_line_count # b[i] = true <=> candidate i selected for B
-	for i in range(candidate_line_count):
-		x[i] = getNewVariable()
-	for i in range(candidate_line_count):
+	a = [None] * candidate_line_count[0] # a[i] = true <=> candidate i selected for A
+	b = [None] * candidate_line_count[1] # b[i] = true <=> candidate i selected for B
+	for i in range(candidate_line_count[0]):
 		a[i] = getNewVariable()
-	for i in range(candidate_line_count):
+	for i in range(candidate_line_count[1]):
 		b[i] = getNewVariable()
-	# variable count is now 3 * candidate_line_count   
+	total_points = points[0] | points[1] # points in A or B
+	# variable count is now 2 * candidate_line_count
 
-	print("Setting up equivalences between parallel classes and disjoint relationship.")
-	for i in range(candidate_line_count): # set up equivalences
-		addImplicationClause([a[i]], [x[i]]) # if ai is chosen then xi is chosen
-		addImplicationClause([b[i]], [x[i]]) # if bi is chosen then xi is chosen
-		addImplicationClause([x[i]], [a[i], b[i]]) # if xi is chosen then either ai is chosen or bi is chosen
-		addClause([-a[i], -b[i]]) # A and B disjoint on same candidate line, e.g. not (ai and bi)
+	point_to_A = defaultdict(list)
+	point_to_B = defaultdict(list)
+	for i in range(candidate_line_count[0]):
+		line = getLine(i, 0)
+		for p in line:
+			point_to_A[p].append(i)
+	for j in range(candidate_line_count[1]):
+		line = getLine(j, 1)
+		for p in line:
+			point_to_B[p].append(j)
 
-	R_indices = [i for i in range(len(candidate_lines[0]))]
-	N_indices = [i for i in range(len(candidate_lines[0]), candidate_line_count)]
+	print("Enforcing coverage of each point by at least one line.")
+	for p in total_points: # at least 1 line for each point must be selected, ~200 clauses
+		a_indices = point_to_A.get(p, [])
+		b_indices = point_to_B.get(p, [])
+		if a_indices:
+			addClause([a[i] for i in a_indices])
+		if b_indices:
+			addClause([b[j] for j in b_indices])
 
-	print("Setting cardinality constraints, enforcing a selection of 20 lines in total, and 10 for each parallel class.")
-	addCardinalityClauses([x[i] for i in range(candidate_line_count)], 20, 20)
-	addCardinalityClauses([a[i] for i in range(candidate_line_count)], 10, 10)
-	addCardinalityClauses([b[i] for i in range(candidate_line_count)], 10, 10)
+	print("Forbidding lines in parallel class A from intersecting within each other.")
+	for i in range(candidate_line_count[0]): # forbid parallel classes from having lines that intersection each other, worst case ~98 to ~112 million clauses twice
+		for j in range(i+1, candidate_line_count[0]):
+			intersections_00 = getIntersections(i, j, 0, 0)
+			if intersections_00 > 0: # ensure parallel lines
+				addImplicationClause([a[i]], [-a[j]])
+				addImplicationClause([a[j]], [-a[i]])
+		if i % 100 == 0:
+			print(f"{i}/{candidate_line_count[0]}")
 
-	print("Furthering cardinality constraints, enforcing 4 relation and 6 non-relation lines for each parallel class.")
-	# ensure that A selects 4 relational and 6 non relation lines
-	addCardinalityClauses([a[i] for i in R_indices], 4, 4)
-	addCardinalityClauses([a[i] for i in N_indices], 6, 6)
-	# ensure that B selects 4 relational and 6 non relation lines
-	addCardinalityClauses([b[i] for i in R_indices], 4, 4)
-	addCardinalityClauses([b[i] for i in N_indices], 6, 6)
+	print("Forbidding lines in parallel class B from intersecting within each other.")
+	for i in range(candidate_line_count[1]): # worst case ~98 to ~112 million clauses twice
+		for j in range(i+1, candidate_line_count[1]):
+			intersections_11 = getIntersections(i, j, 1, 1)
+			if intersections_11 > 0: # ensure parallel lines
+				addImplicationClause([b[i]], [-b[j]])
+				addImplicationClause([b[j]], [-b[i]])
+		if i % 100 == 0:
+			print(f"{i}/{candidate_line_count[1]}")
 
-	print("Forbidding parallel classes from intersecting within each other.")
-	for i in range(candidate_line_count): # forbid parallel classes from having lines that intersection each other
-		for j in range(i+1, candidate_line_count):
-			if getIntersections(i, j) > 0:
-				addClause([-a[i], -a[j]])
-				addClause([-b[i], -b[j]])
+	compatibleA = [[] for _ in range(candidate_line_count[0])]
+	compatibleB = [[] for _ in range(candidate_line_count[1])]
 
 	print("Enforcing exactly one intersection for each line in one parallel class to the other.")
-	for i in range(candidate_line_count): # A's candidate lines each intersect a line in B once
-		intersectingB = [j for j in range(candidate_line_count) if getIntersections(i, j) == 1]
-		if len(intersectingB) == 0: # no compatible B to intersect exactly once -> cannot choose a_i
-			addClause([-a[i]])
-		else: # at least one: (-a_i OR b_j1 OR b_j2 OR ...)
-			addImplicationClause([a[i]], [b[j] for j in intersectingB])
-			for p, q in itertools.combinations(intersectingB, 2):
-				addClause([-a[i], -b[p], -b[q]])
-	for j in range(candidate_line_count): # B's candidate lines each intersect a line in A once
-		intersectingA = [i for i in range(candidate_line_count) if getIntersections(i, j) == 1]
-		if len(intersectingA) == 0:
-			addClause([-b[j]])
-		else:
-			addImplicationClause([b[j]], [a[i] for i in intersectingA])
-			for p, q in itertools.combinations(intersectingA, 2):
-				addClause([-b[j], -a[p], -a[q]])
+	for i in range(candidate_line_count[0]): # worst case ~98 to ~112 million clauses twice
+		for j in range(candidate_line_count[1]): 
+			intersections_01 = getIntersections(i, j, 0, 1)
+			if intersections_01 != 1: # ensure each line selected is incident once to another in the other parallel class
+				addImplicationClause([a[i]], [-b[j]])
+				addImplicationClause([b[j]], [-a[i]])
+			else:
+				compatibleA[i].append(j)
+				compatibleB[j].append(i)
+		if i % 100 == 0:
+			print(f"{i}/{candidate_line_count[0]}")
 
-	clauseCount = len(clauses)
-	with open(input_path, "w") as f:
-		f.write(f"p cnf {variableCount} {len(clauses)}\n")
-		f.write("\n".join(clauses))
+	print("Removing orphan lines, those lines that were selected but not their partner.")
+	for i in range(candidate_line_count[0]): # worse case 14k clauses
+		if len(compatibleA[i]) == 0:
+			addClause([-a[i]])
+
+	for j in range(candidate_line_count[1]): # worse case 14k clauses
+		if len(compatibleB[j]) == 0:
+			addClause([-b[j]])
+
+	prepend_to_file_with_temp(input_path, f"p cnf {variableCount} {clauseCount}\n") # worse case for clause count is between 294 and 336 million clauses
 			
 	dimacs_elapsed = round((time.time() - start_time) * 100)/100
 	print("Wrote DIMACS CNF file to:", input_path)  
@@ -225,18 +217,4 @@ if __name__ == "__main__":
 	print("     Dimacs elapsed time:", dimacs_elapsed, "seconds")
 	print("     SAT Solver elapsed time:", kissat_elapsed, "seconds")
 
-# x_i = true implies candidate line i is in the net for all 1 <= i <= candidate_line_count
-# A implies 10 candidate lines, 4 relation and 6 non relation
-# B implies 10 candidate lines, 4 relation and 6 non relation
-# A's candidate lines do not intersect each other
-# B's candidate lines do not intersect each other
-# A's candidate lines each intersect a line in B once
-# B's candidate lines each intersect a line in A once
-# A and B do not share the same candidate lines
-
-# I might need to add in the lines from parallel class 0 and 1 to add orthogonality property between lines from these parllel classes and the 2 new ones we are making
-#   Similarly, two lines ℓ1 and ℓ2 are orthogonal if |ℓ1 ∩ ℓ2| = 1. A k-net(n) is a partial linear space N = (P, L) consisting of a set P of n 2 points and a set L of kn lines, 
-#   such that each line is incident with n points and each point is incident with k lines.
-
-# Currently does not work, either uses too much memory or some other reason for the python command to auto execute it (but most of the time WSL just crashes).
-#	Running with 12 GB for MEMORY, 12 GB for SWAP, and 12 processors avaliable
+# cd /mnt/g/Code/sat\ solver\ stuff/refinements\ and\ candidate\ lines
