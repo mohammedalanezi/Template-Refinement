@@ -180,7 +180,7 @@ if __name__ == "__main__":
 	compatibleB = [[] for _ in range(candidate_line_count[1])]
 
 	print("Enforcing exactly one intersection for each line in one parallel class to the other.")
-	for i in range(candidate_line_count[0]): # worst case ~98 to ~112 million clauses twice
+	for i in range(candidate_line_count[0]): # worst case ~9604 to ~12544 million clauses twice
 		for j in range(candidate_line_count[1]): 
 			intersections_01 = getIntersections(i, j, 0, 1)
 			if intersections_01 != 1: # ensure each line selected is incident once to another in the other parallel class
@@ -201,7 +201,7 @@ if __name__ == "__main__":
 		if len(compatibleB[j]) == 0:
 			addClause([-b[j]])
 
-	prepend_to_file_with_temp(input_path, f"p cnf {variableCount} {clauseCount}\n") # worse case for clause count is between 294 and 336 million clauses
+	prepend_to_file_with_temp(input_path, f"p cnf {variableCount} {clauseCount}\n") # worse case for clause count is between 9 and 12 billion clauses
 			
 	dimacs_elapsed = round((time.time() - start_time) * 100)/100
 	print("Wrote DIMACS CNF file to:", input_path)  
