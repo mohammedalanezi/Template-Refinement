@@ -201,7 +201,6 @@ if __name__ == "__main__":
 			intersections_01 = getIntersections(i, j, 0, 1)
 			if intersections_01 != 1: # ensure each line selected is incident once to another in the other parallel class
 				addImplicationClause([a[i]], [-b[j]])
-				addImplicationClause([b[j]], [-a[i]])
 		if i % 1000 == 0:
 			print(f"{i}/{candidate_line_count[0]}")
 
